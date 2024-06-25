@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 """Defines the HBNB console."""
+import sys
 import cmd
+from datetime import datetime
 from shlex import split
 from models import storage
-from datetime import datetime
 from models.base_model import BaseModel
 from models.user import User
 from models.state import State
@@ -16,38 +17,35 @@ from models.review import Review
 class HBNBCommand(cmd.Cmd):
     """Defines the HolbertonBnB command interpreter."""
 
-    prompt = "(hbnb) "
-    __classes = {
-        "BaseModel",
-        "User",
-        "State",
-        "City",
-        "Amenity",
-        "Place",
-        "Review"
-    }
+    prompt = '(hbnb) ' if sys.__stdin__.isatty() else ''
+
+    classes = {
+               'BaseModel': BaseModel, 'User': User, 'Place': Place,
+               'State': State, 'City': City, 'Amenity': Amenity,
+               'Review': Review
+              }
 
     def emptyline(self):
         """Ignore empty spaces."""
         pass
 
-    def do_quit(self, line):
-        """Quit command to exit the program."""
-        return True
-
     def do_EOF(self, line):
-        """EOF signal to exit the program."""
-        print("")
-        return True
+        """Handles EOF to exit program """
+        print()
+        exit()
+        
+    def do_quit(self, command):
+        """ Method to exit the HBNB console"""
+        exit()
 
-    def do_create(self, line):
+    def do_create(self, arg):
         """Usage: create <class> <key 1>=<value 2> <key 2>=<value 2> ...
         Create a new class instance with given keys/values and print its id.
         """
         try:
-            if not line:
+            if not arg:
                 raise SyntaxError()
-            my_list = line.split(" ")
+            my_list = arg.split(" ")
 
             kwargs = {}
             for i in range(1, len(my_list)):
@@ -73,19 +71,16 @@ class HBNBCommand(cmd.Cmd):
             print("** class name missing **")
         except NameError:
             print("** class doesn't exist **")
+        new_instance = HBNBCommand.classes[my_list[0]](**kw)
+        new_instance.save()
+        print(new_instance.id)
 
     def do_show(self, line):
-        """Prints the string representation of an instance
-        Exceptions:
-            SyntaxError: when there is no args given
-            NameError: when there is no object taht has the name
-            IndexError: when there is no id given
-            KeyError: when there is no valid id given
-        """
+        """ Method to show an individual object """
         try:
-            if not line:
+            if not arg:
                 raise SyntaxError()
-            my_list = line.split(" ")
+            my_list = arg.split(" ")
             if my_list[0] not in self.__classes:
                 raise NameError()
             if len(my_list) < 2:
@@ -114,9 +109,9 @@ class HBNBCommand(cmd.Cmd):
             KeyError: when there is no valid id given
         """
         try:
-            if not line:
+            if not arg:
                 raise SyntaxError()
-            my_list = line.split(" ")
+            my_list = arg.split(" ")
             if my_list[0] not in self.__classes:
                 raise NameError()
             if len(my_list) < 2:
@@ -137,24 +132,6 @@ class HBNBCommand(cmd.Cmd):
         except KeyError:
             print("** no instance found **")
 
-    def do_all(self, line):
-        """Usage: all or all <class> or <class>.all()
-        Display string representations of all instances of a given class.
-        If no class is specified, displays all instantiated objects."""
-        if not line:
-            o = storage.all()
-            print([o[k].__str__() for k in o])
-            return
-        try:
-            args = line.split(" ")
-            if args[0] not in self.__classes:
-                raise NameError()
-
-            o = storage.all(eval(args[0]))
-            print([o[k].__str__() for k in o])
-
-        except NameError:
-            print("** class doesn't exist **")
 
     def do_update(self, line):
         """Updates an instanceby adding or updating attribute
@@ -167,9 +144,9 @@ class HBNBCommand(cmd.Cmd):
             ValueError: when there is no value given
         """
         try:
-            if not line:
+            if not arg:
                 raise SyntaxError()
-            my_list = split(line, " ")
+            my_list = split(arg, " ")
             if my_list[0] not in self.__classes:
                 raise NameError()
             if len(my_list) < 2:
@@ -183,6 +160,7 @@ class HBNBCommand(cmd.Cmd):
             if len(my_list) < 4:
                 raise ValueError()
             v = objects[key]
+        
             try:
                 v.__dict__[my_list[2]] = eval(my_list[3])
             except Exception:
@@ -201,6 +179,25 @@ class HBNBCommand(cmd.Cmd):
         except ValueError:
             print("** value missing **")
 
+def do_all(self, line):
+        """Usage: all or all <class> or <class>.all()
+        Display string representations of all instances of a given class.
+        If no class is specified, displays all instantiated objects."""
+        if not line:
+            o = storage.all()
+            print([o[k].__str__() for k in o])
+            return
+        try:
+            args = line.split(" ")
+            if args[0] not in self.__classes:
+                raise NameError()
+
+            o = storage.all(eval(args[0]))
+            print([o[k].__str__() for k in o])
+
+        except NameError:
+            print("** class doesn't exist **")
+    
     def count(self, line):
         """count the number of instances of a class
         """
@@ -245,7 +242,7 @@ class HBNBCommand(cmd.Cmd):
         """retrieve all instances of a class and
         retrieve the number of instances
         """
-        my_list = line.split('.')
+        my_list = arg.split('.')
         if len(my_list) >= 2:
             if my_list[1] == "all()":
                 self.do_all(my_list[0])
